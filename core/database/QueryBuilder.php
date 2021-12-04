@@ -15,46 +15,119 @@ class QueryBuilder
 	{
 
 		$structure = [
-			":order_ID",
-			":shop_ID",
-//			"closed_at",
-//			"created_at",
-//			"updated_at",
-			":total_price"
-//			"subtotal_price",
-//			"total_weight",
-//			"total_tax",
-//			"currency",
-//			"financial_status",
-//			"total_discounts",
-//			"name",
-//			"processed_at",
-//			"fulfillment_status",
-//			"country",
-//			"province",
-//			"total_production_cost",
-//			"total_items",
-//			"total_order_shipping_cost",
-//			"total_order_handling_cost"
+			["category" => 'order_ID', 'type' => 'str'],
+			["category" => 'shop_ID', 'type' => 'int'],
+			["category" => 'closed_at', 'type' => 'time'],
+			["category" => 'created_at', 'type' => 'time'],
+			["category" => 'updated_at', 'type' => 'time'],
+			["category" => 'total_price', 'type' => 'float'],
+			["category" => 'subtotal_price', 'type' => 'float'],
+			["category" => 'total_weight', 'type' => 'float'],
+			["category" => 'total_tax', 'type' => 'float'],
+			["category" => 'currency', 'type' => 'str'],
+			["category" => 'financial_status', 'type' => 'str'],
+			["category" => 'total_discounts', 'type' => 'int'],
+			["category" => 'name', 'type' => 'str'],
+			["category" => 'processed_at', 'type' => 'time'],
+			["category" => 'fulfillment_status', 'type' => 'str'],
+			["category" => 'country', 'type' => 'str'],
+			["category" => 'province', 'type' => 'str'],
+			["category" => 'total_production_cost', 'type' => 'float'],
+			["category" => 'total_items', 'type' => 'int'],
+			["category" => 'total_order_shipping_cost', 'type' => 'float'],
+			["category" => 'total_order_handling_cost', 'type' => 'float']
 		];
-			echo implode(',', $structure);
 
-		$stmt = $this->pdo->prepare('INSERT INTO orders VALUES('. implode(',', $structure).
-                      ')');
-		foreach ($data as $item) {
-//			foreach($structure as $field)
-//			{
-//				$stmt->bindValue($field, $item[$field]);
-//			}
-			$stmt->bindValue(":order_ID", intval($item['order_ID']));
-			$stmt->bindValue(":shop_ID", intval($item['shop_ID']));
-			$stmt->bindValue(":total_price", floatval($item['total_price']));
+		$fieldX = [];
+
+		foreach ($structure as $field) {
+			$fieldX[] = $field['category'];
+			$fieldY[] = ':' . $field['category'];
+		}
+
+		$sql = "INSERT INTO orders (" . implode(",", $fieldX) . ")  VALUES " .
+			"(" . implode(',', $fieldY) . ")";
+
+		echo "SQL: " . $sql . "END <br>";
+
+		$stmt = $this->pdo->prepare($sql);
+		static::bindValue_($stmt, $structure, $data);
+	}
+
+	static function placeholders($text, $count = 0, $separator = ",")
+	{
+		$result = array();
+		if ($count > 0) {
+			for ($x = 0; $x < $count; $x++) {
+				$result[] = $text;
+			}
+		}
+		return implode($separator, $result);
+	}
+
+	public function sumNetSales(){
+		//Net Sales - sum of total_price fields of orders where financial_status is one of the following: 'paid', 'partially_paid'
+		try {
+			$stmt = $this->pdo->prepare("SELECT sum(total_price) FROM orders WHERE financial_status IN('paid', 'partially_paid')");
+			$stmt->execute();
+
+			// set the resulting array to associative
+			$result = $stmt->setFetchMode(PDO::FETCH_ASSOC);
+
+			return $stmt->fetchColumn();
+		}
+		catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+		}
+	}
+
+
+	public function productionCosts(){
+		try {
+			$stmt = $this->pdo->prepare("SELECT sum(total_production_cost) FROM orders WHERE financial_status IN('paid', 'partially_paid') AND fulfillment_status='fulfilled'");
+			$stmt->execute();
+
+			// set the resulting array to associative
+			$result = $stmt->setFetchMode(PDO::FETCH_ASSOC);
+			return $stmt->fetchColumn();
+		}
+		catch(PDOException $e) {
+			echo "Error: " . $e->getMessage();
+		}
+	}
+
+
+	static function bindValue_($stmt, $structure, $data)
+	{
+		$temp = '';
+		foreach ($data as $d) {
+			foreach ($structure as $field) {
+				switch ($field['type']) {
+					case 'int':
+						$temp = 'intval';
+						break;
+					case 'time':
+					case 'str':
+						$temp = 'strval';
+						break;
+					case 'float':
+						$temp = 'floatval';
+						break;
+				}
+				echo $temp($d->{$field['category']}) . "," . $temp . "," . $field['category'] . ': ' . $d->{$field['category']} . '<br>';
+				if ($d->{$field['category']}) {
+					$stmt->bindValue(":" . $field['category'], $temp($d->{$field['category']}));
+				} else {
+					$stmt->bindValue(":" . $field['category'], $d->{$field['category']});
+				}
+			}
 			$stmt->execute();
 		}
 	}
 
 
-	public function selectAll($table)
+	public
+	function selectAll($table)
 	{
 		$statement = $this->pdo->prepare("select * from {$table}");
 
@@ -65,7 +138,8 @@ class QueryBuilder
 
 	}
 
-	public function insert($table, $parameters)
+	public
+	function insert($table, $parameters)
 	{
 
 		$sql = sprintf(
@@ -87,31 +161,32 @@ class QueryBuilder
 
 	}
 
-	public function createTables()
+	public
+	function createTables()
 	{
 		// sql to create table
 		$sql = "CREATE TABLE orders (
- 			order_ID					 INT UNSIGNED PRIMARY KEY,
-  			shop_ID 					 INT UNSIGNED NOT NULL,
+ 			order_ID					 VARCHAR(50) PRIMARY KEY,
+  			shop_ID 					 VARCHAR(50),
  			closed_at 					TIMESTAMP,
- 			created_at					 TIMESTAMP,
+ 			created_at					TIMESTAMP,
  			updated_at 					TIMESTAMP,
- 			total_price 				FLOAT UNSIGNED NOT NULL,
- 			subtotal_price 				FLOAT UNSIGNED NOT NULL,
- 			total_weight 				FLOAT UNSIGNED NOT NULL,
- 			total_tax 					FLOAT UNSIGNED NOT NULL,
- 			currency			 		VARCHAR(5) NOT NULL,
- 			financial_status 				VARCHAR(12) NOT NULL,
- 			total_discounts 				INT UNSIGNED NOT NULL,
- 			name 						VARCHAR(255) NOT NULL,
+ 			total_price 				FLOAT UNSIGNED ,
+ 			subtotal_price 				FLOAT UNSIGNED,
+ 			total_weight 				FLOAT UNSIGNED ,
+ 			total_tax 					FLOAT UNSIGNED,
+ 			currency			 		VARCHAR(255),
+ 			financial_status 				VARCHAR(255),
+ 			total_discounts 				INT UNSIGNED,
+ 			name 						VARCHAR(255),
  			processed_at 					TIMESTAMP,
- 			fulfillment_status 			VARCHAR(255) NOT NULL,
- 			country 						VARCHAR(255) NOT NULL,
- 			province 					VARCHAR(255) NOT NULL,
- 			total_production_cost 		FLOAT UNSIGNED NOT NULL,
- 			total_items 				INT UNSIGNED NOT NULL,
- 			total_order_shipping_cost	 FLOAT UNSIGNED NOT NULL,
- 			total_order_handling_cost 	FLOAT UNSIGNED NOT NULL
+ 			fulfillment_status 			VARCHAR(255),
+ 			country 						VARCHAR(255),
+ 			province 					VARCHAR(255) ,
+ 			total_production_cost 		FLOAT UNSIGNED,
+ 			total_items 				INT UNSIGNED,
+ 			total_order_shipping_cost	 FLOAT UNSIGNED,
+ 			total_order_handling_cost 	FLOAT UNSIGNED
  		)";
 
 		try {

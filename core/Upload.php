@@ -5,6 +5,7 @@ namespace App\Core;
 
 use GuzzleHttp\Client;
 
+
 use PDO;
 
 class Upload
@@ -40,13 +41,13 @@ class Upload
 //		var_export($res->json());
 //		echo $res->getBody()->
 
-		$items = json_decode((string) $res->getBody(), true);
+		$items = json_decode((string) $res->getBody());
 //		foreach ($items['data'] as $key => $item) {
 //			echo $item['order_ID'] . ': ';
 //			echo $item['shop_ID'] . '<br>';
 //		}
 
-		App::get('database')->build($items['data']);
+		App::get('database')->build($items->{'data'});
 
 	}
 
