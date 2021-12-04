@@ -48,7 +48,6 @@ class QueryBuilder
 		$sql = "INSERT INTO orders (" . implode(",", $fieldX) . ")  VALUES " .
 			"(" . implode(',', $fieldY) . ")";
 
-		echo "SQL: " . $sql . "END <br>";
 
 		$stmt = $this->pdo->prepare($sql);
 		static::bindValue_($stmt, $structure, $data);
@@ -114,7 +113,6 @@ class QueryBuilder
 						$temp = 'floatval';
 						break;
 				}
-				echo $temp($d->{$field['category']}) . "," . $temp . "," . $field['category'] . ': ' . $d->{$field['category']} . '<br>';
 				if ($d->{$field['category']}) {
 					$stmt->bindValue(":" . $field['category'], $temp($d->{$field['category']}));
 				} else {

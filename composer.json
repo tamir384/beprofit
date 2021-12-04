@@ -11,6 +11,7 @@
 	"require": {
 		"ext-pdo": "*",
 		"guzzlehttp/guzzle": "^7.4",
-		"ext-json": "*"
+		"ext-json": "*",
+		"ext-mysqli": "*"
 	}
 }
